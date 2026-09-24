@@ -11,8 +11,6 @@ which doesn't work if you've turned local auth off.
 
 image: `ghcr.io/ramble-s/bookorbit-watcher` (amd64 + arm64)
 
-vibe coded, provided as-is. open to issues / PRs, but no promises anything will be done with them.
-
 ## setup
 
 swap `CHANGE_ME` in `sql/grant-readonly.sql` for a real password, then run both sql files against
@@ -72,6 +70,6 @@ the watcher exits right away if either required var is missing.
 - it reads bookorbit's internal tables, so an update could break it. if the trigger ever
   disappears, the watcher posts a warning to discord instead of going quiet. tested on bookorbit
   2.10 and 3.0.
-- i built this for my own setup. issues and PRs are welcome but i can't promise much support.
+- vibe coded, provided as-is. open to issues / PRs, but no promises anything will be done with them.
 
 MIT licensed.
