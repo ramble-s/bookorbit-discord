@@ -165,8 +165,8 @@ def post_discord(payload, attempts=5):
             headers={
                 "Content-Type": "application/json",
                 "User-Agent": (
-                    "bookorbit-watcher/1.0 "
-                    "(+https://github.com/ramble-s/bookorbit-watcher)"
+                    "bookorbit-discord/1.0.1 "
+                    "(+https://github.com/ramble-s/bookorbit-discord)"
                 ),
             },
             method="POST",
@@ -302,7 +302,7 @@ def catch_up(conn, state):
 def run_once(state):
     """One connection's lifetime. Returns when the connection is lost."""
     with psycopg.connect(
-        DSN, autocommit=True, application_name="bookorbit-watcher"
+        DSN, autocommit=True, application_name="bookorbit-discord"
     ) as conn:
         log.info("connected, listening on %s", CHANNEL)
         warned = check_trigger(conn, False)

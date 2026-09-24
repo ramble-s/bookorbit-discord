@@ -1,4 +1,4 @@
-# bookorbit-watcher
+# bookorbit-discord
 
 sends bookorbit book requests to a discord webhook. bookorbit has no notifications outside the app
 itself ([bookorbit#1231](https://github.com/bookorbit/bookorbit/issues/1231)), so this fills the gap
@@ -9,7 +9,7 @@ change, and the watcher just listens. it also connects as a read-only role, so i
 library even if something goes wrong. the one api-based script i found logs in with a password,
 which doesn't work if you've turned local auth off.
 
-image: `ghcr.io/ramble-s/bookorbit-watcher` (amd64 + arm64)
+image: `ghcr.io/ramble-s/bookorbit-discord` (amd64 + arm64)
 
 ## setup
 
@@ -24,8 +24,8 @@ docker exec -i bookorbit-db psql -U bookorbit -d bookorbit < sql/install-trigger
 add it to your bookorbit stack:
 
 ```yaml
-bookorbit-watcher:
-  image: ghcr.io/ramble-s/bookorbit-watcher:latest
+bookorbit-discord:
+  image: ghcr.io/ramble-s/bookorbit-discord:latest
   restart: unless-stopped
   environment:
     DATABASE_URL: postgresql://bookorbit_watch:${WATCH_PASSWORD}@bookorbit-db:5432/bookorbit
