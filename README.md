@@ -49,6 +49,9 @@ if auto-grab is on, drop `approved`. it only lasts a few seconds before the book
 just noise. if auto-grab is off, keep it: your own requests skip `pending` and wait at `approved`, so
 without it you won't hear about them at all.
 
+an `approved` request parked because auto-grab is off (`failure_code` `AUTOMATION_DISABLED`) is
+announced as **waiting for release pick**, in orange, since it still needs you to pick a release.
+
 ## env vars
 
 | var | default | what it does |

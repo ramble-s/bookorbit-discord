@@ -77,11 +77,18 @@ HEADLINES = {
     "rejected": "Request rejected",
     "cancelled": "Request cancelled",
 }
+# Overrides keyed on (status, failure_code). With autoGrab off an approved
+# request is not done, it is waiting for someone to pick a release, and
+# "Request approved" read as nothing left to do.
+WAITING_COLOR = 0xE67E22
+STATE_HEADLINES = {
+    ("approved", "AUTOMATION_DISABLED"): ("Waiting for release pick", WAITING_COLOR),
+}
 
 ROW_SQL = """
 select r.id, r.title, r.subtitle, r.authors, r.status, r.status_reason,
        r.self_serve, r.media_kind, r.cover_url, r.note, r.updated_at,
-       u.username, u.name
+       u.username, u.name, r.failure_code
 from book_requests r
 join users u on u.id = r.user_id
 where r.id = %s
@@ -206,7 +213,12 @@ def embed_for(row):
     (
         rid, title, subtitle, authors, status, status_reason,
         self_serve, media_kind, cover_url, note, _updated, username, name,
+        failure_code,
     ) = row
+    headline, color = STATE_HEADLINES.get(
+        (status, failure_code),
+        (HEADLINES.get(status, "Request updated"), COLORS.get(status, 0x5865F2)),
+    )
     fields = [
         {"name": "Requested by", "value": name or username, "inline": True},
         {"name": "Status", "value": status, "inline": True},
@@ -221,9 +233,9 @@ def embed_for(row):
         fields.append({"name": "Reason", "value": status_reason[:1024], "inline": False})
 
     embed = {
-        "title": f"{HEADLINES.get(status, 'Request updated')}: {title}",
+        "title": f"{headline}: {title}",
         "description": subtitle or None,
-        "color": COLORS.get(status, 0x5865F2),
+        "color": color,
         "fields": fields,
         "footer": {"text": f"{authors_line(authors)} - request #{rid}"},
     }
