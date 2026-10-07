@@ -45,8 +45,9 @@ two things that got me on the first deploy:
 by default: `pending`, `approved`, `needs_review`, `failed` and `available`. change it with
 `STATUSES`.
 
-if auto-grab is on, drop `approved`. it only lasts a few seconds before the book is grabbed, so it's
-just noise. if auto-grab is off, keep it: your own requests skip `pending` and wait at `approved`, so
+if auto-grab is on you can drop `approved`. it only lasts a few seconds before the book is grabbed;
+the watcher holds a new `approved` request for `APPROVED_SETTLE_SECONDS` and skips it if it has moved on
+by then, so keeping it costs little. if auto-grab is off, keep it: your own requests skip `pending` and wait at `approved`, so
 without it you won't hear about them at all.
 
 an `approved` request parked because auto-grab is off (`failure_code` `AUTOMATION_DISABLED`) is
@@ -62,6 +63,7 @@ announced as **waiting for release pick**, in orange, since it still needs you t
 | `STATUSES` | `pending,approved,needs_review,failed,available` | which statuses get announced |
 | `WEBHOOK_USERNAME` | `BookOrbit` | name the webhook posts as |
 | `TRIGGER_CHECK_INTERVAL` | `86400` | seconds between checks that the trigger still exists |
+| `APPROVED_SETTLE_SECONDS` | `3` | how long a new `approved` request is held before it's read and posted; bookorbit sets the reason a moment after the insert |
 | `LOG_LEVEL` | `INFO` | set to `DEBUG` to see skipped statuses too |
 | `STATE_FILE` | `/state/last_seen` | where it remembers the last request it handled |
 | `HEARTBEAT_FILE` | `/state/heartbeat` | touched every 30s, the healthcheck reads it |

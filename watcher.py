@@ -57,6 +57,13 @@ STATUSES = tuple(
     ).split(",")
     if s.strip()
 )
+# How long a fresh `approved` row is held before it is read again. BookOrbit
+# inserts the request as approved and only sets failure_code (e.g.
+# AUTOMATION_DISABLED) ~20 ms later, in an update that does not change the
+# status and so sends no notification. Reading at once always saw no code.
+# With auto-grab on, the row has usually moved past approved by then, and
+# the hold drops it instead of posting it ahead of its next status.
+APPROVED_SETTLE_SECONDS = float(os.environ.get("APPROVED_SETTLE_SECONDS", "3"))
 # How often to re-check that the trigger still exists, in seconds.
 TRIGGER_CHECK_INTERVAL = int(os.environ.get("TRIGGER_CHECK_INTERVAL", "86400"))
 
@@ -248,12 +255,18 @@ def embed_for(row):
     return {"username": WEBHOOK_USERNAME, "embeds": [embed]}
 
 
-def announce(conn, request_id, state):
+def announce(conn, request_id, state, held=None, settled=False):
     row = conn.execute(ROW_SQL, (request_id,)).fetchone()
     if row is None:
         log.info("request %s vanished before it could be read", request_id)
         return
     status = row[4]
+    if settled and status != "approved":
+        log.debug("request %s moved on to %s while held, skipped", request_id, status)
+        return
+    if status == "approved" and row[13] is None and held is not None:
+        held.setdefault(request_id, time.monotonic() + APPROVED_SETTLE_SECONDS)
+        return
     if status not in STATUSES:
         log.debug("request %s status=%s not announced", request_id, status)
         state.save(row[10])
@@ -321,6 +334,7 @@ def run_once(state):
         last_check = time.monotonic()
         catch_up(conn, state)
         conn.execute(f"listen {CHANNEL}")
+        held = {}
 
         while not _stop:
             heartbeat()
@@ -336,8 +350,12 @@ def run_once(state):
             # above 1 delays a lone event by the full timeout. Measured at 30s
             # on the first deploy. Returning per notification keeps delivery
             # immediate; a burst just means several quick cycles.
+            timeout = 30
+            if held:
+                timeout = max(0.1, min(min(held.values()) - time.monotonic(), 30))
             payloads = [
-                note.payload for note in conn.notifies(timeout=30, stop_after=1)
+                note.payload
+                for note in conn.notifies(timeout=timeout, stop_after=1)
             ]
             for payload in payloads:
                 if _stop:
@@ -348,7 +366,11 @@ def run_once(state):
                     log.warning("unparseable payload: %s", payload[:200])
                     continue
                 if event.get("id") is not None:
-                    announce(conn, int(event["id"]), state)
+                    announce(conn, int(event["id"]), state, held)
+            now = time.monotonic()
+            for request_id in [i for i, due in held.items() if due <= now]:
+                del held[request_id]
+                announce(conn, request_id, state, settled=True)
             if time.monotonic() - last_check >= TRIGGER_CHECK_INTERVAL:
                 warned = check_trigger(conn, warned)
                 last_check = time.monotonic()
