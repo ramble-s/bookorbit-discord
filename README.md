@@ -62,6 +62,7 @@ announced as **waiting for release pick**, in orange, since it still needs you t
 | `PUBLIC_URL` | none | your bookorbit url. makes each card link to its requests page |
 | `STATUSES` | `pending,approved,needs_review,failed,available` | which statuses get announced |
 | `MEDIA_KINDS` | none (all) | only announce requests of these kinds, e.g. `comic` or `ebook,comic` |
+| `WAKE_URL` | none | POSTed `{"source":"bookorbit","id":N}` on every request change, any kind or status, so another service can react at once |
 | `WEBHOOK_USERNAME` | `BookOrbit` | name the webhook posts as |
 | `TRIGGER_CHECK_INTERVAL` | `86400` | seconds between checks that the trigger still exists |
 | `APPROVED_SETTLE_SECONDS` | `3` | how long a new `approved` request is held before it's read and posted; bookorbit sets the reason a moment after the insert |

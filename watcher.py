@@ -25,6 +25,7 @@ import logging
 import os
 import signal
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -63,6 +64,9 @@ STATUSES = tuple(
 MEDIA_KINDS = tuple(
     s.strip() for s in os.environ.get("MEDIA_KINDS", "").split(",") if s.strip()
 )
+# Optional. POSTed (fire and forget) on every request change, whatever its
+# kind or status, so another service can react at once instead of polling.
+WAKE_URL = os.environ.get("WAKE_URL", "")
 # How long a fresh `approved` row is held before it is read again. BookOrbit
 # inserts the request as approved and only sets failure_code (e.g.
 # AUTOMATION_DISABLED) ~20 ms later, in an update that does not change the
@@ -261,6 +265,24 @@ def embed_for(row):
     return {"username": WEBHOOK_USERNAME, "embeds": [embed]}
 
 
+def _post_wake(event):
+    try:
+        req = urllib.request.Request(
+            WAKE_URL,
+            data=json.dumps({"source": "bookorbit", "id": event.get("id")}).encode(),
+            headers={"content-type": "application/json"},
+            method="POST",
+        )
+        urllib.request.urlopen(req, timeout=5).read()
+    except Exception as e:  # never let a wake hold up or break announcing
+        log.debug("wake %s failed: %s", WAKE_URL, e)
+
+
+def wake(event):
+    if WAKE_URL:
+        threading.Thread(target=_post_wake, args=(event,), daemon=True).start()
+
+
 def announce(conn, request_id, state, held=None, settled=False):
     row = conn.execute(ROW_SQL, (request_id,)).fetchone()
     if row is None:
@@ -376,6 +398,7 @@ def run_once(state):
                     log.warning("unparseable payload: %s", payload[:200])
                     continue
                 if event.get("id") is not None:
+                    wake(event)
                     announce(conn, int(event["id"]), state, held)
             now = time.monotonic()
             for request_id in [i for i, due in held.items() if due <= now]:
