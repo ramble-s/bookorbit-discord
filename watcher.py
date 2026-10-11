@@ -57,6 +57,12 @@ STATUSES = tuple(
     ).split(",")
     if s.strip()
 )
+# Optional. Only requests of these media kinds (ebook, comic, audiobook) are
+# announced; empty means every kind. For when another tool already notifies
+# about some kinds, e.g. ebook requests handled elsewhere.
+MEDIA_KINDS = tuple(
+    s.strip() for s in os.environ.get("MEDIA_KINDS", "").split(",") if s.strip()
+)
 # How long a fresh `approved` row is held before it is read again. BookOrbit
 # inserts the request as approved and only sets failure_code (e.g.
 # AUTOMATION_DISABLED) ~20 ms later, in an update that does not change the
@@ -261,6 +267,10 @@ def announce(conn, request_id, state, held=None, settled=False):
         log.info("request %s vanished before it could be read", request_id)
         return
     status = row[4]
+    if MEDIA_KINDS and row[7] not in MEDIA_KINDS:
+        log.debug("request %s kind=%s not announced", request_id, row[7])
+        state.save(row[10])
+        return
     if settled and status != "approved":
         log.debug("request %s moved on to %s while held, skipped", request_id, status)
         return
